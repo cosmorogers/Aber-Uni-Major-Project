@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 2.8) 
 project (basic)
+SET(CMAKE_MODULE_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake/ )
+
 find_package(raspicam REQUIRED)
 find_package(OpenCV)
 IF  ( OpenCV_FOUND AND raspicam_CV_FOUND)
