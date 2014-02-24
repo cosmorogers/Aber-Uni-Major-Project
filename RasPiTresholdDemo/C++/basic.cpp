@@ -1,3 +1,4 @@
+#include <raspicam/raspicam.h>
 #include <opencv2/opencv.hpp>
 
 #include <iostream>
@@ -88,11 +89,15 @@ int main( int argc, char** argv )
   /// Call the function to initialize
   //Threshold_Demo( 0, 0 );
 
-
-  VideoCapture capture;
-      capture.open( -1 );
-    if ( ! capture.isOpened() ) { printf("--(!)Error opening video capture\n"); return -1; }
-  while ( capture.read(src) )
+raspicam::RaspiCam capture; //Cmaera object
+//VideoCapture capture;
+      //capture.open( -1 );
+    if ( ! capture.open() ) { printf("--(!)Error opening video capture\n"); return -1; }
+    cout<<"Sleeping for 3 secs"<<endl;
+    sleep(3);
+    capture.grab();
+    
+  while ( capture.retrieve(src) )
     {
         if( src.empty() )
         {
