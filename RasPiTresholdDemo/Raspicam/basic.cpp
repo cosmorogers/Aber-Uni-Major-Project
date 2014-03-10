@@ -45,10 +45,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "PotentialLine.h"
 #include "PotentialPoint.h"
+#include "Target.h"
 
 using namespace std;
 using namespace cv;
-//String window_name = "Capture - Face detection";
 
 RNG rng(12345);
 
@@ -131,16 +131,15 @@ int main ( int argc,char **argv ) {
     /* 
     * Firstly;
     * Find Circles in circles
-    * Save the center points in foundCenter
     */
     for( int i = 0; i< contours.size(); i++ ) {
         
       if (abs(center[i+1].x - center[i].x) < 1 && abs(center[i+1].y - center[i].y) < 1) {        
           
-        Scalar color1 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+        /*Scalar color1 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
         Scalar color2 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
         circle( drawing, center[i], (int)radius[i], color1, 2, 8, 0 );
-        circle( drawing, center[i+1], (int)radius[i+1], color2, 2, 8, 0 );
+        circle( drawing, center[i+1], (int)radius[i+1], color2, 2, 8, 0 );*/
           
         if ((int)radius[i] > (int)radius[i+1]) {
           //potentialPoints[found] = new PotentialPoint(center[i], radius[i]);
@@ -159,7 +158,8 @@ int main ( int argc,char **argv ) {
     }
 
     
-    Point2f target [3];
+    Target target;
+    bool firstTarget = true;
     
     //Found 3 or more circles in circles   
     if (found >= 3) {
@@ -211,6 +211,9 @@ int main ( int argc,char **argv ) {
                 float dist2 = potentialLines[l][n].getLength();
                 float longSide = 0;
                 bool foundPossible = false;
+                
+                PotentialPoint shortest;
+                PotentialPoint longest;
                   
                 //cout<<l<<" to "<<n<< " is "<<dist2<<endl;
                 if ( abs(dist2 - distHalf) < 5 ) {
@@ -218,6 +221,10 @@ int main ( int argc,char **argv ) {
                   //cout<<"OK1"<<endl;
                   longSide = dist2;
                   foundPossible = true;
+                  
+                  longest = potentialPoints[m];
+                  shortest = potentialPoints[n];
+                  
                   /*
                   Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
                   line( drawing, foundCenter[l], foundCenter[m], lineColor);
@@ -230,6 +237,10 @@ int main ( int argc,char **argv ) {
                   //Found another line from this point that is double the length of me
                   longSide = distDouble;
                   foundPossible = true;
+                  
+                  longest = potentialPoints[n];
+                  shortest = potentialPoints[m];
+                  
                   //cout<<"OK2"<<endl;
                   /*
                   Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
@@ -255,27 +266,35 @@ int main ( int argc,char **argv ) {
                   
                   //cout<<"Hyp: "<<(hypotenuse * hypotenuse)<<" dist: "<<(dist * dist)<<" dist2: "<<(dist2 * dist2)<<endl;
                   //cout<<"Foundy: "<< (float) ((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ))<<endl;
-                  if ( abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) ) < 500) {
+                  float diff = abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) );
+                 // cout<<"Diff: "<<diff<<" target diff:"<<target.getDiff()<<endl;
+                  if ( diff < 500 && (firstTarget || diff < target.getDiff()) ) {
                     //cout<<"Setting foundM to :"<<n<<endl;
+                    firstTarget = false;
                     foundM = n;
-                    cout<<"OK: "<<abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) )<<endl;
+                   // cout<<"OK: "<<potentialPoints[l].getCenter()<<endl;
+                    
+                    Target t(potentialPoints[l], longest, shortest, diff);
+                    target = t;
+                    
+                    
                     //Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-                    Scalar lineColor = Scalar( 0, 0, 255);
+                    /*Scalar lineColor = Scalar( 0, 0, 255);
                     line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
                     line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
-                    line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
+                    line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);*/
                   
                     //cout<<"("<<l<<","<<m<<"):"<<lengths[l][m]<<"("<<l<<","<<n<<"):"<<lengths[l][n]<<"("<<m<<","<<n<<"):"<<lengths[m][n]<<endl;
                       
                     foundCount++;
-                    lCount++;
+                    
                   } else {
                     //Not within bounds, draw a yellow triangle for now
-                    cout<<"Too big: "<<abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) )<<endl;
-                    Scalar lineColor = Scalar( 0, 255, 255);
-                    line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
-                    line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
-                    line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
+                    //cout<<"Too big: "<<abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) )<<endl;
+                    //Scalar lineColor = Scalar( 0, 255, 255);
+                    //line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
+                    //line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
+                    //line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
                   }
                     
                 }
@@ -296,6 +315,13 @@ int main ( int argc,char **argv ) {
         }
       }
       */
+    }
+    
+    //best target
+    if (!firstTarget) {
+      //Have set at least one target!
+      target.draw(drawing);
+      lCount++;
     }
      
        
@@ -326,17 +352,17 @@ int main ( int argc,char **argv ) {
    */
         
     cv::imshow( "ANAM", drawing );
-    cout<<"Found: "<<foundCount<<" points:"<<found<<endl;
+   // cout<<"Found: "<<foundCount<<" points:"<<found<<endl;
     
     int c = 0;
-    do {
-      c = cv::waitKey(0);
+    //do {
+      c = cv::waitKey(10);
       if( (char)c == 27 ) { 
         break; // escape
       } else if ( (char)c == 112 ) {
         
       }
-    } while ( (char)c != 32 );
+    //} while ( (char)c != 32 );
     
     if ( (char)c == 27) { break; }
 
