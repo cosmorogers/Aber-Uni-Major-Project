@@ -13,15 +13,17 @@ Target::Target(PotentialPoint a, PotentialPoint b, PotentialPoint c, float diff)
 }
 
 /*
- * A ----- C
+ * A ------- C
  * |
  * |
  * |
+ * P
  * |
  * |
  * |
  * B
  * 
+ * We want to have P in the center of the image
  */
 
 void Target::setData(PotentialPoint a, PotentialPoint b, PotentialPoint c, float diff) {
@@ -40,5 +42,18 @@ void Target::draw(cv::Mat drawing) {
   cv::line( drawing, getA().getCenter(), getC().getCenter(), red ); //AC, shortest side
   cv::line( drawing, getA().getCenter(), getB().getCenter(), green);//AB, longest side
   //line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
+  
+  float x2 = getA().getCenter().x;
+  float y2 = getB().getCenter().y;
+  
+  cv::line( drawing, getA().getCenter(), cv::Point2f(x2, y2), cv::Scalar(255,0,0) );
+  
+  float centerx = ( getA().getCenter().x + getB().getCenter().x ) / 2;
+  float centery = ( getA().getCenter().y + getB().getCenter().y ) / 2;
+  
+  
+  std::cout<<"center: "<<centerx<<","<<centery<<std::endl;
+  
+  cv:circle( drawing, cv::Point2f(centerx, centery), 10, cv::Scalar(255,0,0) );
   
 }

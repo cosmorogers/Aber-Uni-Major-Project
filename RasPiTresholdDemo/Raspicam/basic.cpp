@@ -50,7 +50,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace std;
 using namespace cv;
 
-RNG rng(12345);
+//RNG rng(12345);
+
+int lowThreshold = 70;
+int const max_lowThreshold = 100;
+int ratio = 3;
+int kernel_size = 3;
+
+char* window_name = "Target Detection";
 
 int main ( int argc,char **argv ) {
   raspicam::RaspiCam_Cv Camera;
@@ -67,7 +74,8 @@ int main ( int argc,char **argv ) {
   if (!Camera.open()) {cerr<<"Error opening the camera"<<endl;return -1;}
   //Start capture
 
-
+  
+  
   time_t timer_begin,timer_end;
   time ( &timer_begin );
   int nCount=0;
@@ -89,13 +97,20 @@ int main ( int argc,char **argv ) {
     vector<Vec4i> hierarchy;
 
     //blur( image, image, Size(3,3) );
-    GaussianBlur( image, image, Size(3,3), 2, 2 );
+    //GaussianBlur( image, image, Size(3,3), 2, 2 );
   
     /// Detect edges using Threshold
     //threshold is rubbish, use canny
     //threshold( image, threshold_output, 0, 255, THRESH_BINARY+THRESH_OTSU );
 
-    Canny( image, threshold_output, 100, 200, 3 );
+    //Canny( image, threshold_output, 100, 200, 3 );
+    
+    
+    blur( image, image, Size(3,3) );
+    Canny( image, threshold_output, lowThreshold, lowThreshold*ratio, kernel_size );
+    
+    
+    
   
     // Find contours
     findContours( threshold_output, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
@@ -351,7 +366,8 @@ int main ( int argc,char **argv ) {
     }
    */
         
-    cv::imshow( "ANAM", drawing );
+    createTrackbar( "Min Threshold:", window_name, &lowThreshold, max_lowThreshold);
+    cv::imshow( window_name, drawing );
    // cout<<"Found: "<<foundCount<<" points:"<<found<<endl;
     
     int c = 0;
