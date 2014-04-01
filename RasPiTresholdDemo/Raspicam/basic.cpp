@@ -43,176 +43,223 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <math.h>
 
+#include "PotentialLine.h"
+#include "PotentialPoint.h"
+#include "Target.h"
+
 using namespace std;
 using namespace cv;
-//String window_name = "Capture - Face detection";
 
-RNG rng(12345);
+//RNG rng(12345);
+
+int lowThreshold = 70;
+int const max_lowThreshold = 100;
+int ratio = 3;
+int kernel_size = 3;
+
+char* window_name = "Target Detection";
 
 int main ( int argc,char **argv ) {
-    raspicam::RaspiCam_Cv Camera;
-    cv::Mat image;
- 
-   //set camera params
-    Camera.set( CV_CAP_PROP_FORMAT, CV_8UC1 );
-    //640x480
-    //1280x960
-    Camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-    Camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-    //Open camera
-    cout<<"Opening Camera..."<<endl;
-    if (!Camera.open()) {cerr<<"Error opening the camera"<<endl;return -1;}
-    //Start capture
+  raspicam::RaspiCam_Cv Camera;
+  cv::Mat image;
+
+  //set camera params
+  Camera.set( CV_CAP_PROP_FORMAT, CV_8UC1 );
+  //640x480
+  //1280x960
+  //2592x1944
+  //1296x972
+  Camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
+  Camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+  //Open camera
+  cout<<"Opening Camera..."<<endl;
+  if (!Camera.open()) {cerr<<"Error opening the camera"<<endl;return -1;}
+  //Start capture
+
+  
+  
+  time_t timer_begin,timer_end;
+  time ( &timer_begin );
+  int nCount=0;
+  int lCount=0;
+  //for ( int i=0; i<200; i++ ) {
+  while (true) {
+    cout<<"Frame grab"<<endl;
+    Camera.grab();
+    Camera.retrieve ( image);
+    nCount++;
+    int foundCount = 0;
+
+    cv::Mat image_thres;
+    Mat image_blured;
+
+    //cv::threshold( image, image_thres, 128, 255, cv::THRESH_BINARY );
+
+    Mat threshold_output;
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+
+    //blur( image, image, Size(3,3) );
+    GaussianBlur( image, image_blured, Size(3,3), 2, 2 );
+  
+    /// Detect edges using Threshold
+    //threshold is rubbish, use canny
+    //threshold( image, threshold_output, 0, 255, THRESH_BINARY+THRESH_OTSU );
+
+    //Canny( image, threshold_output, 100, 200, 3 );
+    
+    //threshold( image, image, 0, 255, THRESH_BINARY+THRESH_OTSU );
+    //blur( image, image, Size(3,3) );
+    Canny( image_blured, threshold_output, lowThreshold, lowThreshold*ratio, kernel_size );
+    
+    
+    
+  
+    // Find contours
+    findContours( threshold_output, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+    // Approximate contours to polygons + get bounding rects and circles
+    vector<vector<Point> > contours_poly( contours.size() );
+    vector<Rect> boundRect( contours.size() );
+    vector<Point2f>center( contours.size() );
+    vector<float>radius( contours.size() );
+    
+    //Point2f foundCenter [contours.size()];
+    
+    PotentialPoint potentialPoints [contours.size()];
+    
+    int found = 0;
+    
+    for( int i = 0; i < contours.size(); i++ ) { 
+      approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+      //boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+      minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
+    }
+
+
+    /// Draw polygonal contour + bonding rects + circles
+    //Mat drawing = Mat::zeros( threshold_output.size(), CV_8UC3 );
+    //Mat drawing = image.clone();
+    Mat drawing;
+    //image.convertTo(drawing, CV_8UC3);
+    //cvtColor(image,drawing,CV_GRAY2RGB);
+    //cvtColor(threshold_output,drawing,CV_GRAY2RGB);
+    cvtColor(image,drawing,CV_GRAY2RGB);
+    
+  
+    /* 
+    * Firstly;
+    * Find Circles in circles
+    */
+    for( int i = 0; i< contours.size(); i++ ) {
+        
+      if (abs(center[i+1].x - center[i].x) < 1 && abs(center[i+1].y - center[i].y) < 1) {        
+          
+        /*Scalar color1 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+        Scalar color2 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+        circle( drawing, center[i], (int)radius[i], color1, 2, 8, 0 );
+        circle( drawing, center[i+1], (int)radius[i+1], color2, 2, 8, 0 );*/
+          
+        if ((int)radius[i] > (int)radius[i+1]) {
+          //potentialPoints[found] = new PotentialPoint(center[i], radius[i]);
+          potentialPoints[found].setCenter(center[i]);
+          potentialPoints[found].setRadius(radius[i]);
+          //foundCenter[found] = center[i];
+        } else {
+          potentialPoints[found].setCenter(center[i+1]);
+          potentialPoints[found].setRadius(radius[i+1]);
+          //foundCenter[found] = center[i+1];
+        }
+
+        i++;
+        found++;
+      }
+    }
 
     
-    time_t timer_begin,timer_end;
-    time ( &timer_begin );
-    int nCount=0;
-    int lCount=0;
-    //for ( int i=0; i<nCount; i++ ) {
-    while (true) {
-        cout<<"Frame grab"<<endl;
-        Camera.grab();
-        Camera.retrieve ( image);
-        nCount++;
-        int foundCount = 0;
-        
-        cv::Mat image_thres;
-
-      //cv::threshold( image, image_thres, 128, 255, cv::THRESH_BINARY );
+    Target target;
+    bool firstTarget = true;
+    
+    //Found 3 or more circles in circles   
+    if (found >= 3) {
+      //Make a 2d array to store all lengths   
+      //float lengths [found][found];
+      PotentialLine potentialLines [found][found];
       
-          Mat threshold_output;
-  vector<vector<Point> > contours;
-  vector<Vec4i> hierarchy;
+      //Do the measurements between each point. some duplication here I think
+      for (int k = 0; k < found; k++) {
 
-  //blur( image, image, Size(3,3) );
-    GaussianBlur( image, image, Size(3,3), 2, 2 );
-  
-        /// Detect edges using Threshold
-  threshold( image, threshold_output, 0, 255, THRESH_BINARY+THRESH_OTSU );
-  /// Find contours
-  findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+        for (int j = k + 1; j < found; j++) {
+          if (j != k) {
+            /*//Two length of triangle
+            float a = abs(foundCenter[j].x - foundCenter[k].x);
+            float b = abs(foundCenter[j].y - foundCenter[k].y);
+            //cout<<foundCenter[k]<<" "<<foundCenter[j]<<" = "<<a<<" , "<<b<<endl;
+            float length = sqrt ( ( pow (a, 2.0) + pow (b, 2.0) ) );
+            lengths[k][j] = length;
+            lengths[j][k] = length;
+            */
+            
+            potentialLines[j][k].setData(potentialPoints[j], potentialPoints[k]);
+            potentialLines[k][j].setData(potentialPoints[k], potentialPoints[j]);
 
-  /// Approximate contours to polygons + get bounding rects and circles
-  vector<vector<Point> > contours_poly( contours.size() );
-  vector<Rect> boundRect( contours.size() );
-  vector<Point2f>center( contours.size() );
-  vector<float>radius( contours.size() );
-  
-  Point2f foundCenter [contours.size()];
-  int found = 0;
-  
-  for( int i = 0; i < contours.size(); i++ ) { 
-    approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-    //boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-    minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
-  }
+            //Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+            //line( drawing, foundCenter[j], foundCenter[k], lineColor);
 
-
-  /// Draw polygonal contour + bonding rects + circles
-  //Mat drawing = Mat::zeros( threshold_output.size(), CV_8UC3 );
-  //Mat drawing = image.clone();
-  Mat drawing;
-  //image.convertTo(drawing, CV_8UC3);
-  cvtColor(image,drawing,CV_GRAY2RGB);
-  for( int i = 0; i< contours.size(); i++ )
-     {
-       //Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       //drawContours( drawing, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
-       //rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
-       //circle( drawing, center[i], (int)radius[i], color, 2, 8, 0 );
-       //if ((int)radius[i] > 10) {
-         
-         if (abs(center[i+1].x - center[i].x) < 1 && abs(center[i+1].y - center[i].y) < 1) {        
-           
-           //Scalar color1 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-           //Scalar color2 = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-           //circle( drawing, center[i], (int)radius[i], color1, 2, 8, 0 );
-           //circle( drawing, center[i+1], (int)radius[i+1], color2, 2, 8, 0 );
-          
-           
-           
-           if ((int)radius[i] > (int)radius[i+1]) {
-             foundCenter[found] = center[i];
-           } else {
-             foundCenter[found] = center[i+1];
-           }
-
-           i++;
-           found++;
-           //cout<<radius[i]<<endl;
-         }
-       //}
-     }
-
-     //cout<<"Found "<<found<<endl;
-     
-     Point2f target [3];
-     
-     if (found >= 3) {
-       
-       float lengths [found][found];
-       
-       for (int k = 0; k < found; k++) {
-         //Find length between each
-         
-         for (int j = k + 1; j < found; j++) {
-           if (j != k) {
-             //Two length of triangle
-             float a = abs(foundCenter[j].x - foundCenter[k].x);
-             float b = abs(foundCenter[j].y - foundCenter[k].y);
-             //cout<<foundCenter[k]<<" "<<foundCenter[j]<<" = "<<a<<" , "<<b<<endl;
-             float length = sqrt ( ( pow (a, 2.0) + pow (b, 2.0) ) );
-             lengths[k][j] = length;
-             lengths[j][k] = length;
-             
-             //Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-             //line( drawing, foundCenter[j], foundCenter[k], lineColor);
-             
-             //cout<<"("<<k<<","<<j<<") is "<<lengths[k][j]<<" and ("<<j<<","<<k<<") is "<<lengths[j][k]<<endl;
-             
-           }
-         }
-       }
-       
-       //cout<<"Calc done"<<endl;
-       //cout<<lengths<<endl;
-       
-       for (int l = 0; l < found; l++) {
-         //cout <<"L is "<<l<<endl;
-         int foundM = -1;
-         for (int m = 0; m < found; m++) {
-           if (m != l && m != foundM) {
-            float dist = lengths[l][m];
+            //cout<<"("<<k<<","<<j<<") is "<<lengths[k][j]<<" and ("<<j<<","<<k<<") is "<<lengths[j][k]<<endl;
+              
+          }
+        }
+      }
+        
+      //cout<<"Calc done"<<endl;
+        
+      for (int l = 0; l < found; l++) {
+        //cout <<"L is "<<l<<endl;
+        int foundM = -1;
+        for (int m = 0; m < found; m++) {
+          if (m != l && m != foundM) {
+            float dist = potentialLines[l][m].getLength();
             float distHalf = (dist / 3) * 2;
             float distDouble = (dist / 2) * 3;
             //cout<<l<<" to "<<m<< " is "<<dist<<"("<<distDouble<<","<<distHalf<<")"<<endl;
             //Go though the rest of the lines
-            
+              
             for (int n = 0; n < found; n++) {
               if (n != m && n != l) {
-                float dist2 = lengths[l][n];
+                float dist2 = potentialLines[l][n].getLength();
                 float longSide = 0;
-                bool found = false;
+                bool foundPossible = false;
                 
+                PotentialPoint shortest;
+                PotentialPoint longest;
+                  
                 //cout<<l<<" to "<<n<< " is "<<dist2<<endl;
                 if ( abs(dist2 - distHalf) < 5 ) {
                   //Found another line from this point that is half the length of me
                   //cout<<"OK1"<<endl;
                   longSide = dist2;
-                  found = true;
+                  foundPossible = true;
+                  
+                  longest = potentialPoints[m];
+                  shortest = potentialPoints[n];
+                  
                   /*
                   Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
                   line( drawing, foundCenter[l], foundCenter[m], lineColor);
                   line( drawing, foundCenter[n], foundCenter[m], lineColor);
                   line( drawing, foundCenter[l], foundCenter[n], lineColor);
-                  
+
                   lCount++;*/
-                  
+                    
                 } else if (abs(dist2 - distDouble) < 5) {
                   //Found another line from this point that is double the length of me
                   longSide = distDouble;
-                  found = true;
+                  foundPossible = true;
+                  
+                  longest = potentialPoints[n];
+                  shortest = potentialPoints[m];
+                  
                   //cout<<"OK2"<<endl;
                   /*
                   Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
@@ -223,9 +270,9 @@ int main ( int argc,char **argv ) {
                   lCount++;*/
                   
                 }
-                
-                if (found) {
-                  float hypotenuse = lengths[n][m];
+                  
+                if (foundPossible) {
+                  float hypotenuse = potentialLines[n][m].getLength();
                   //cout<<"l: "<<l<<" m:"<<m<<" n:"<<n<<endl;
                   //cout<<"lm:"<<lengths[l][m]<<", "<<lengths[m][l]<<endl;
                   //cout<<"ln:"<<lengths[l][n]<<", "<<lengths[n][l]<<endl;
@@ -234,87 +281,120 @@ int main ( int argc,char **argv ) {
                   
                   //cout<<"l = "<<l<<", m = "<<m<<", n ="<<n<<endl;
                   
-                  //cout<<"("<<l<<","<<m<<"):"<<lengths[l][m]<<"("<<l<<","<<n<<"):"<<lengths[l][n]<<"("<<m<<","<<n<<"):"<<lengths[m][n]<<endl;
+                  
                   
                   //cout<<"Hyp: "<<(hypotenuse * hypotenuse)<<" dist: "<<(dist * dist)<<" dist2: "<<(dist2 * dist2)<<endl;
                   //cout<<"Foundy: "<< (float) ((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ))<<endl;
-                  if ( abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) ) < 500) {
+                  float diff = abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) );
+                 // cout<<"Diff: "<<diff<<" target diff:"<<target.getDiff()<<endl;
+                  if ( diff < 500 && (firstTarget || diff < target.getDiff()) ) {
                     //cout<<"Setting foundM to :"<<n<<endl;
+                    firstTarget = false;
                     foundM = n;
+                   // cout<<"OK: "<<potentialPoints[l].getCenter()<<endl;
+                    
+                    Target t(potentialPoints[l], longest, shortest, diff);
+                    target = t;
+                    
+                    
                     //Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-                    Scalar lineColor = Scalar( 0, 0, 255);
-                    line( drawing, foundCenter[l], foundCenter[m], lineColor);
-                    line( drawing, foundCenter[n], foundCenter[m], lineColor);
-                    line( drawing, foundCenter[l], foundCenter[n], lineColor);
-                    
-                    
-                    foundCount++;
-                    lCount++;
-                  } else {
-                    Scalar lineColor = Scalar( 0, 255, 255);
-                    line( drawing, foundCenter[l], foundCenter[m], lineColor);
-                    line( drawing, foundCenter[n], foundCenter[m], lineColor);
-                    line( drawing, foundCenter[l], foundCenter[n], lineColor);
-                  }
+                    /*Scalar lineColor = Scalar( 0, 0, 255);
+                    line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
+                    line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
+                    line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);*/
                   
-                 }
-               }
-             }
-           }
-         }
-       }
-       
-       /*
-       Scalar lineColor = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       line( drawing, foundCenter[0], foundCenter[1], lineColor);
-       line( drawing, foundCenter[1], foundCenter[2], lineColor);
-       line( drawing, foundCenter[2], foundCenter[0], lineColor);
-       */
-     }
+                    //cout<<"("<<l<<","<<m<<"):"<<lengths[l][m]<<"("<<l<<","<<n<<"):"<<lengths[l][n]<<"("<<m<<","<<n<<"):"<<lengths[m][n]<<endl;
+                      
+                    foundCount++;
+                    
+                  } else {
+                    //Not within bounds, draw a yellow triangle for now
+                    //cout<<"Too big: "<<abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) )<<endl;
+                    //Scalar lineColor = Scalar( 0, 255, 255);
+                    //line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
+                    //line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
+                    //line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
+                  }
+                    
+                }
+              }
+            }
+          }
+        }
+      }
+      /*
+      //print lengths 2d array
+      cout<<"I have found "<<found<<" possible points"<<endl;
+      cout<<"Here is the 2d array"<<endl;
+      
+      for (int i = 0; i < found; i++) {
+        cout<<i<<endl;
+        for (int j = 0; j < found; j++) {
+          cout<<j<<": "<<lengths[i][j]<<" or "<<lengths[j][i]<<endl;
+        }
+      }
+      */
+    }
+    
+    //best target
+    if (!firstTarget) {
+      //Have set at least one target!
+      target.draw(drawing);
+      lCount++;
+    }
      
-        
-/*
- * 
- * CIRCLES*
-  //vector<Vec3f> circles;
-GaussianBlur( image, image, Size(7,7), 2, 2 );
-threshold( image, image, 95, 255, THRESH_BINARY );
+       
+    /* CIRCLES 
     vector<Vec3f> circles;
-  /// Apply the Hough Transform to find the circles
-  HoughCircles( image, circles, CV_HOUGH_GRADIENT,
+    GaussianBlur( image, image, Size(7,7), 2, 2 );
+    threshold( image, image, 95, 255, THRESH_BINARY );
+    vector<Vec3f> circles;
+    // Apply the Hough Transform to find the circles
+    HoughCircles( image, circles, CV_HOUGH_GRADIENT,
           1,   // accumulator resolution (size of the image / 2)
-          5,  // minimum distance between two circles
+          5,  // minimum distance between two circleslengths
           200, // Canny high threshold
           50, // minimum number of votes
           0, 1000); // min and max radius
 
-  /// Draw the circles detected
+    // Draw the circles detected
   
-  for( size_t i = 0; i < circles.size(); i++ )
-  {
-     cout<<"Circle"<<endl;
+    for( size_t i = 0; i < circles.size(); i++ ) {
+      cout<<"Circle"<<endl;
       Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
       int radius = cvRound(circles[i][2]);
       // circle center
       circle( image, center, 3, Scalar(0,255,0), -1, 8, 0 );
       // circle outline
       circle( image, center, radius, Scalar(0,0,255), 3, 8, 0 );
-   }
+    }
    */
         
-        cv::imshow( "ANAM", drawing );
-        cout<<"Found: "<<foundCount<<" points:"<<found<<endl;
+    createTrackbar( "Canny Min Thres:", window_name, &lowThreshold, max_lowThreshold);
+    cv::imshow( window_name, drawing );
+   // cout<<"Found: "<<foundCount<<" points:"<<found<<endl;
+    
+    int c = 0;
+    //do {
+      c = cv::waitKey(10);
+      if( (char)c == 27 ) { 
+        break; // escape
+      } else if ( (char)c == 112 ) {
         
-        int c = cv::waitKey(10);
-        if( (char)c == 27 ) { break; } // escape
+      }
+    //} while ( (char)c != 32 );
+    
+    if ( (char)c == 27) { break; }
 
-    }
-    cout<<"Stop camera..."<<endl;
-    Camera.release();
+
+  } //end while true
+  
+  cout<<"Stop camera..."<<endl;
+  Camera.release();
     
     
-    //show time statistics
-    time ( &timer_end ); /* get current time; same as: timer = time(NULL)  */
-    double secondsElapsed = difftime ( timer_end,timer_begin );
-    cout<< secondsElapsed<<" seconds for "<< nCount<<"  frames, "<< lCount <<" locks (" << (float)((float)lCount/(float)nCount) * 100 <<"%) : FPS = "<<  ( float ) ( ( float ) ( nCount ) /secondsElapsed ) <<endl;
+  //show time statistics
+  time ( &timer_end ); /* get current time; same as: timer = time(NULL)  */
+  double secondsElapsed = difftime ( timer_end,timer_begin );
+  cout<< secondsElapsed<<" seconds for "<< nCount<<"  frames, "<< lCount <<" locks (" << (float)((float)lCount/(float)nCount) * 100 <<"%) : FPS = "<<  ( float ) ( ( float ) ( nCount ) /secondsElapsed ) <<endl;
 }
