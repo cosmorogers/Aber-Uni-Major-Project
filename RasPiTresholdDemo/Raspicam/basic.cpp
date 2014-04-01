@@ -67,6 +67,8 @@ int main ( int argc,char **argv ) {
   Camera.set( CV_CAP_PROP_FORMAT, CV_8UC1 );
   //640x480
   //1280x960
+  //2592x1944
+  //1296x972
   Camera.set(CV_CAP_PROP_FRAME_WIDTH, 640);
   Camera.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
   //Open camera
@@ -89,6 +91,7 @@ int main ( int argc,char **argv ) {
     int foundCount = 0;
 
     cv::Mat image_thres;
+    Mat image_blured;
 
     //cv::threshold( image, image_thres, 128, 255, cv::THRESH_BINARY );
 
@@ -97,7 +100,7 @@ int main ( int argc,char **argv ) {
     vector<Vec4i> hierarchy;
 
     //blur( image, image, Size(3,3) );
-    //GaussianBlur( image, image, Size(3,3), 2, 2 );
+    GaussianBlur( image, image_blured, Size(3,3), 2, 2 );
   
     /// Detect edges using Threshold
     //threshold is rubbish, use canny
@@ -105,9 +108,9 @@ int main ( int argc,char **argv ) {
 
     //Canny( image, threshold_output, 100, 200, 3 );
     
-    
-    blur( image, image, Size(3,3) );
-    Canny( image, threshold_output, lowThreshold, lowThreshold*ratio, kernel_size );
+    //threshold( image, image, 0, 255, THRESH_BINARY+THRESH_OTSU );
+    //blur( image, image, Size(3,3) );
+    Canny( image_blured, threshold_output, lowThreshold, lowThreshold*ratio, kernel_size );
     
     
     
@@ -140,7 +143,8 @@ int main ( int argc,char **argv ) {
     Mat drawing;
     //image.convertTo(drawing, CV_8UC3);
     //cvtColor(image,drawing,CV_GRAY2RGB);
-    cvtColor(threshold_output,drawing,CV_GRAY2RGB);
+    //cvtColor(threshold_output,drawing,CV_GRAY2RGB);
+    cvtColor(image,drawing,CV_GRAY2RGB);
     
   
     /* 
@@ -366,7 +370,7 @@ int main ( int argc,char **argv ) {
     }
    */
         
-    createTrackbar( "Min Threshold:", window_name, &lowThreshold, max_lowThreshold);
+    createTrackbar( "Canny Min Thres:", window_name, &lowThreshold, max_lowThreshold);
     cv::imshow( window_name, drawing );
    // cout<<"Found: "<<foundCount<<" points:"<<found<<endl;
     

@@ -1,5 +1,9 @@
 #include <iostream>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+
 #include "Target.h"
 #include "PotentialLine.h"
 #include "PotentialPoint.h"
@@ -52,8 +56,49 @@ void Target::draw(cv::Mat drawing) {
   float centery = ( getA().getCenter().y + getB().getCenter().y ) / 2;
   
   
-  std::cout<<"center: "<<centerx<<","<<centery<<std::endl;
+  //std::cout<<"center: "<<centerx<<","<<centery<<std::endl;
   
-  cv:circle( drawing, cv::Point2f(centerx, centery), 10, cv::Scalar(255,0,0) );
+  
+  int imageCenterX = drawing.cols /2;
+  int imageCenterY = drawing.rows /2;
+  
+  
+  float dx = abs(centerx - imageCenterX);
+  float dy = abs(centery - imageCenterY);
+  
+  float bearingRad = atan( dy / dx );
+  float bearingDeg = bearingRad *  180 / M_PI;
+  
+  if (centerx > imageCenterX) {
+    //Center is to the left
+    if (centery > imageCenterY) {
+      //Center is to bottom
+      bearingRad += ( ( 3 * M_PI) / 2 );
+      bearingDeg += 270;
+    } else if (centery < imageCenterY ) {
+      //Center is to the top
+      bearingRad = ( ( 3 * M_PI) / 2 ) - bearingRad;
+      bearingDeg = 270 - bearingDeg;
+    }
+  } else if (centerx < imageCenterX) {
+    //Center is to the right
+    if (centery > imageCenterY) {
+      //Center is to bottom
+      bearingRad = (M_PI / 2) - bearingRad;
+      bearingDeg = 90 - bearingDeg;
+    } else if (centery < imageCenterY ) {
+      //Center is to the top
+      bearingRad += M_PI / 2;
+      bearingDeg += 90;
+    }
+  }
+  
+  float pitchMultiplier = cos(bearingRad);
+  float rollMultiplier = sin(bearingRad);
+  
+  std::cout<<"Bearing: "<<bearingDeg<<" pitch:"<<pitchMultiplier<<" roll:"<<rollMultiplier<<std::endl;
+  
+  cv::circle( drawing, cv::Point2f(centerx, centery), 5, cv::Scalar(255,0,0) );
+  cv::circle( drawing, cv::Point2f(imageCenterX, imageCenterY), 5, cv::Scalar(255,0,0) );
   
 }
