@@ -58,19 +58,20 @@ int kernel_size = 3;
 RNG rng(12345);
 
 Mat process(Mat image);
+bool in_circle (Point2f circle, float radius, Point2f point);
 
 int main(int argc, char **argv) {
 	Mat image;
 
-	image = imread("/home/chris/Data/PiTarget/pics_2014-03-30/lapse_0480.jpg",
-			CV_LOAD_IMAGE_COLOR);   // Read the file
+	image = imread("/home/chris/Documents/pics_2014-03-30/lapse_0281.jpg", CV_LOAD_IMAGE_COLOR);   // Read the file
 
-	cvtColor(image, image, CV_BGR2GRAY);
-
+//	image = imread("/home/chris/target_e.png", CV_LOAD_IMAGE_COLOR);
 	if (!image.data) {
 		cout << "Could not open or find the image" << std::endl;
 		return -1;
 	}
+
+	cvtColor(image, image, CV_BGR2GRAY);
 
 	process(image);
 
@@ -91,8 +92,13 @@ Mat process(Mat image) {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 
+
+
 	//blur( image, image, Size(3,3) );
-	GaussianBlur(image, image_blured, Size(3, 3), 2, 2);
+	GaussianBlur(image, image, Size(3, 3), 2, 2);
+
+	threshold( image, image, 0, 255, THRESH_BINARY+THRESH_OTSU );
+
 
 	/// Detect edges using Threshold
 	//threshold is rubbish, use canny
@@ -102,7 +108,7 @@ Mat process(Mat image) {
 
 	//threshold( image, image, 0, 255, THRESH_BINARY+THRESH_OTSU );
 	//blur( image, image, Size(3,3) );
-	Canny(image_blured, threshold_output, lowThreshold, lowThreshold * ratio,
+	Canny(image, threshold_output, lowThreshold, lowThreshold * ratio,
 			kernel_size);
 
 	// Find contours
@@ -140,46 +146,56 @@ Mat process(Mat image) {
 	 * Firstly;
 	 * Find Circles in circles
 	 */
-	for (int i = 0; i < contours.size(); i++) {
+	for (unsigned int i = 0; i < contours.size(); i++) {
+	//for ( vector<vector<Point> >::iterator i = contours.begin(); i!=contours.end(); ) {
 		bool foundPair = false;
-		//cout<<i<<" : "<<center[i]<<endl;
+		cout<<i<<" : "<<center[i]<<", "<<radius[i]<<endl;
 
-		for (int j = i; j < contours.size(); j++) {
-			//cout<<"Checking "<<j<<" ("<<abs(center[j].x - center[i].x)<<","<<abs(center[j].y - center[i].y)<<")"<<endl;
-			if (i != j && abs(center[j].x - center[i].x) < 2 && abs(center[j].y - center[i].y) < 2 ) {
-				float doubleri = radius[i] * 2;
-				float doublerj = radius[j] * 2;
-				//cout<<"Possible "<<j<<"("<<abs(radius[i] - doublerj)<<","<<abs(radius[j] - doubleri)<<")"<<endl;
-				if ( abs(radius[i] - doublerj) < 7 || abs(radius[j] - doubleri) < 7 ) {
+		//j should be smaller and thus the inner circle.
+		for (unsigned int j = 0; j < contours.size(); j++) {
+		//for ( vector<vector<Point> >::iterator j=contours.begin(); j!=contours.end(); ) {
+			if (i != j && radius[i] > radius[j]) {
+				float diffX = abs(center[j].x - center[i].x);
+				float diffY = abs(center[j].y - center[i].y);
+				//cout<<"Checking "<<j<<" ("<<diffX<<","<<diffY<<"), radj:"<<radius[j]<<endl;
+				if (in_circle(center[i], radius[i], center[j]) && min(diffX, diffY) < 5 && max(diffX, diffY) < 50 ) {
+					float doubleri = radius[i] * 2;
+					float doublerj = radius[j] * 2;
+					float maxRadiusError = radius[i] * 0.25;
 
-					cout<<"Matching " << i << " to " << j << " radi: " << radius[i] << "," <<radius[j]<<endl;
-					Scalar color1 = Scalar(0, 255, 0);
-					//Scalar color2 = Scalar(255, 0, 0);
-					circle(drawing, center[i], (int) radius[i], color1, 2, 8, 0);
-					circle(drawing, center[j], (int) radius[j], color1, 2, 8, 0);
+					cout<<"Possible: "<<j<<"("<<abs(radius[i] - doublerj)<<","<<abs(radius[j] - doubleri)<<") max error:"<<maxRadiusError<<endl;
 
-					if ((int) radius[i] > (int) radius[j]) {
-						//potentialPoints[found] = new PotentialPoint(center[i], radius[i]);
-						potentialPoints[found].setCenter(center[i]);
-						potentialPoints[found].setRadius(radius[i]);
-						//foundCenter[found] = center[i];
-					} else {
-						potentialPoints[found].setCenter(center[j]);
-						potentialPoints[found].setRadius(radius[j]);
-						//foundCenter[found] = center[i+1];
+					if ( abs(radius[i] - doublerj) < maxRadiusError || abs(radius[j] - doubleri) < maxRadiusError) {
+
+						cout<<"Matching " << i << " to " << j << " radi: " << radius[i] << "," <<radius[j]<<endl;
+						Scalar color1 = Scalar(0, 255, 0);
+						Scalar color2 = Scalar(128, 255, 0);
+						circle(drawing, center[i], (int) radius[i], color1, 2, 8, 0);
+						circle(drawing, center[j], (int) radius[j], color1, 2, 8, 0);
+
+						if ((int) radius[i] > (int) radius[j]) {
+							//potentialPoints[found] = new PotentialPoint(center[i], radius[i]);
+							potentialPoints[found].setCenter(center[i]);
+							potentialPoints[found].setRadius(radius[i]);
+							//foundCenter[found] = center[i];
+						} else {
+							potentialPoints[found].setCenter(center[j]);
+							potentialPoints[found].setRadius(radius[j]);
+							//foundCenter[found] = center[i+1];
+						}
+
+						//i++;
+						found++;
+						foundPair = true;
+						break;
 					}
-
-					//i++;
-					found++;
-					foundPair = true;
-					break;
 				}
 			}
 		}
 
 		if (!foundPair) {
-			Scalar color = Scalar(255, 0, 0);
-			//circle(drawing, center[i], (int) radius[i], color, 2, 8, 0);
+			Scalar color2 = Scalar(0, 0, 255);
+			circle(drawing, center[i], (int) radius[i], color2, 2, 8, 0);
 		}
 	}
 
@@ -261,7 +277,7 @@ Mat process(Mat image) {
 								float b = potentialLines[l][m].getLength();
 
 								float cosine =  acos((a*a + b*b -hypotenuse*hypotenuse) / (2 * a * b) );
-								cout<<"cosine: " << cosine<<endl;
+
 
 								//cout<<"l: "<<l<<" m:"<<m<<" n:"<<n<<endl;
 								//cout<<"lm:"<<lengths[l][m]<<", "<<lengths[m][l]<<endl;
@@ -274,6 +290,9 @@ Mat process(Mat image) {
 								//cout<<"Hyp: "<<(hypotenuse * hypotenuse)<<" dist: "<<(dist * dist)<<" dist2: "<<(dist2 * dist2)<<endl;
 								//cout<<"Foundy: "<< (float) ((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ))<<endl;
 								float diff = abs(cosine - M_PI/2);
+
+								cout<<"cosine: " << cosine<<" diff:"<<diff<<endl;
+
 								//cout<<"Diff: "<<diff<<" target diff:"<<target.getDiff()<<endl;
 								if (diff < 0.1 && (firstTarget || diff < target.getDiff())) {
 									//cout<<"Setting foundM to :"<<n<<endl;
@@ -296,11 +315,11 @@ Mat process(Mat image) {
 
 								} else {
 									//Not within bounds, draw a yellow triangle for now
-									cout<<"Too big: "<<abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) )<<endl;
+									cout<<"Too big or larger: "<<diff<<endl;
 									Scalar lineColor = Scalar( 0, 255, 255);
-									line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
-									line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
-									line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
+									//line( drawing, potentialPoints[l].getCenter(), potentialPoints[m].getCenter(), lineColor);
+									//line( drawing, potentialPoints[n].getCenter(), potentialPoints[m].getCenter(), lineColor);
+									//line( drawing, potentialPoints[l].getCenter(), potentialPoints[n].getCenter(), lineColor);
 								}
 
 							}
@@ -318,8 +337,16 @@ Mat process(Mat image) {
 		//lCount++;
 	}
 
+	imwrite( "/home/chris/target.png", drawing );
+
 	namedWindow("Target Identification", CV_WINDOW_NORMAL); // Create a window for display.
 	imshow("Target Identification", drawing);
 
 	return drawing;
+}
+
+bool in_circle (Point2f circle, float radius, Point2f point) {
+
+	float dist = pow((circle.x - point.x),2) + pow((circle.y - point.y),2);
+	return dist <= pow(radius, 2);
 }

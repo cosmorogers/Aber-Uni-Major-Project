@@ -105,9 +105,7 @@ void Target::draw(cv::Mat drawing) {
 	std::cout << "Bearing: " << bearingDeg << " pitch:" << pitchMultiplier
 			<< " roll:" << rollMultiplier << std::endl;
 
-	cv::circle(drawing, cv::Point2f(centerx, centery), 5,
-			cv::Scalar(255, 0, 0), 3);
-	cv::circle(drawing, cv::Point2f(imageCenterX, imageCenterY), 5,
-			cv::Scalar(255, 0, 0), 3);
+	cv::circle(drawing, cv::Point2f(centerx, centery), 5, cv::Scalar(255, 0, 0), 3);
+	cv::circle(drawing, cv::Point2f(imageCenterX, imageCenterY), 5, cv::Scalar(255, 0, 0), 3);
 
 }
