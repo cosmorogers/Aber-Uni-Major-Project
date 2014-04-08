@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <stdio.h>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -61,14 +62,30 @@ void Target::draw(cv::Mat drawing) {
 
 	cv::line(drawing, getA().getCenter(), cv::Point2f(x2, y2), cv::Scalar(255, 0, 0), 3);
 
+	float yawx = getA().getCenter().x - getB().getCenter().x;
+	float yawy = getA().getCenter().y - getB().getCenter().y;
+
+	float yawrad = atan2(yawy, yawx) + (M_PI / 2);
+	float yawdeg = yawrad * 180 / M_PI;
+
 	float centerx = (getA().getCenter().x + getB().getCenter().x) / 2;
 	float centery = (getA().getCenter().y + getB().getCenter().y) / 2;
 
-	//std::cout<<"center: "<<centerx<<","<<centery<<std::endl;
+	float imageCenterX = drawing.cols / 2;
+	float imageCenterY = drawing.rows / 2;
 
-	int imageCenterX = drawing.cols / 2;
-	int imageCenterY = drawing.rows / 2;
+	float dx = imageCenterX - centerx;
+	float dy = imageCenterY - centery;
 
+	float bearingRad = atan2(dy, dx) + (M_PI / 2);
+	float bearingDeg = bearingRad * 180 / M_PI;
+
+	float relativebearingrad = bearingRad - yawrad;
+	float relativebearingdeg = relativebearingrad * 180 / M_PI;
+
+
+
+/*
 	float dx = abs(centerx - imageCenterX);
 	float dy = abs(centery - imageCenterY);
 
@@ -97,13 +114,12 @@ void Target::draw(cv::Mat drawing) {
 			bearingRad += M_PI / 2;
 			bearingDeg += 90;
 		}
-	}
+	}*/
 
-	float pitchMultiplier = cos(bearingRad);
-	float rollMultiplier = sin(bearingRad);
+	float pitchMultiplier = cos(relativebearingrad);
+	float rollMultiplier = sin(relativebearingrad);
 
-	std::cout << "Bearing: " << bearingDeg << " pitch:" << pitchMultiplier
-			<< " roll:" << rollMultiplier << std::endl;
+	printf ("pitch: %f, roll: %f, yaw:%f, abs bearing: %f, rel bearing: %f\n", pitchMultiplier, rollMultiplier, yawdeg, bearingDeg, relativebearingdeg );
 
 	cv::circle(drawing, cv::Point2f(centerx, centery), 5, cv::Scalar(255, 0, 0), 3);
 	cv::circle(drawing, cv::Point2f(imageCenterX, imageCenterY), 5, cv::Scalar(255, 0, 0), 3);

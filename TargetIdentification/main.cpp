@@ -63,7 +63,8 @@ bool in_circle (Point2f circle, float radius, Point2f point);
 int main(int argc, char **argv) {
 	Mat image;
 
-	image = imread("/home/chris/Documents/pics_2014-03-30/lapse_0281.jpg", CV_LOAD_IMAGE_COLOR);   // Read the file
+	//image = imread("/home/chris/Data/PiTarget/pics_2014-03-30/lapse_0281.jpg", CV_LOAD_IMAGE_GRAYSCALE);   // Read the file
+	image = imread("/home/chris/Data/PiTarget/pics_2014-03-30/lapse_0297_r90.jpg", CV_LOAD_IMAGE_GRAYSCALE);   // Read the file
 
 //	image = imread("/home/chris/target_e.png", CV_LOAD_IMAGE_COLOR);
 	if (!image.data) {
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	cvtColor(image, image, CV_BGR2GRAY);
+	//cvtColor(image, image, CV_BGR2GRAY);
 
 	process(image);
 
@@ -97,7 +98,7 @@ Mat process(Mat image) {
 	//blur( image, image, Size(3,3) );
 	GaussianBlur(image, image, Size(3, 3), 2, 2);
 
-	threshold( image, image, 0, 255, THRESH_BINARY+THRESH_OTSU );
+	//threshold( image, image, 0, 255, THRESH_BINARY+THRESH_OTSU );
 
 
 	/// Detect edges using Threshold
