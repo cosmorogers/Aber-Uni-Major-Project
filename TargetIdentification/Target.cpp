@@ -74,14 +74,14 @@ void Target::draw(cv::Mat drawing) {
 	float imageCenterX = drawing.cols / 2;
 	float imageCenterY = drawing.rows / 2;
 
-	float dx = imageCenterX - centerx;
-	float dy = imageCenterY - centery;
+	float dx = centerx - imageCenterX;
+	float dy = centery - imageCenterY;
 
 	float bearingRad = atan2(dy, dx) + (M_PI / 2);
 	float bearingDeg = bearingRad * 180 / M_PI;
 
-	float relativebearingrad = bearingRad - yawrad;
-	float relativebearingdeg = relativebearingrad * 180 / M_PI;
+	//float relativebearingrad = bearingRad - yawrad;
+	//float relativebearingdeg = relativebearingrad * 180 / M_PI;
 
 
 
@@ -116,12 +116,24 @@ void Target::draw(cv::Mat drawing) {
 		}
 	}*/
 
-	float pitchMultiplier = cos(relativebearingrad);
-	float rollMultiplier = sin(relativebearingrad);
+	float pitchMultiplier = cos(bearingRad);
+	float rollMultiplier = sin(bearingRad);
 
-	printf ("pitch: %f, roll: %f, yaw:%f, abs bearing: %f, rel bearing: %f\n", pitchMultiplier, rollMultiplier, yawdeg, bearingDeg, relativebearingdeg );
+	printf ("pitch: %f, roll: %f, yaw:%f, abs bearing: %f\n", pitchMultiplier, rollMultiplier, yawdeg, bearingDeg );
 
 	cv::circle(drawing, cv::Point2f(centerx, centery), 5, cv::Scalar(255, 0, 0), 3);
 	cv::circle(drawing, cv::Point2f(imageCenterX, imageCenterY), 5, cv::Scalar(255, 0, 0), 3);
+
+	std::stringstream ys, ps, rs, bs;
+	ys << "yaw: " << yawdeg;
+	ps << "pitch: " << pitchMultiplier;
+	rs << "roll: " << rollMultiplier;
+	bs << "bear: " << bearingDeg;
+
+	cv::putText(drawing, ys.str(), cv::Point(20,50), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(0,255,255),2);
+	cv::putText(drawing, ps.str(), cv::Point(20,150), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(0,255,255),2);
+	cv::putText(drawing, rs.str(), cv::Point(20,250), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(0,255,255),2);
+	cv::putText(drawing, bs.str(), cv::Point(20,350), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(0,255,255),2);
+
 
 }
