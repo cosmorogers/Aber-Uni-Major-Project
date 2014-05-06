@@ -23,7 +23,7 @@ public:
 	virtual ~Target();
 	void setData(PotentialPoint a, PotentialPoint b, PotentialPoint c, float diff);
 	float getRotation();
-	void draw(cv::Mat drawing);
+	void process(cv::Mat drawing);
 
 	float getDiff() {
 		return pythagoras_dif;

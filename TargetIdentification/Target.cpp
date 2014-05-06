@@ -49,7 +49,7 @@ void Target::setData(PotentialPoint a, PotentialPoint b, PotentialPoint c,
 
 }
 
-void Target::draw(cv::Mat drawing) {
+void Target::process(cv::Mat drawing) {
 	//std::cout<<"Drawing "<<point_a.getCenter()<<std::endl;
 	cv::Scalar red = cv::Scalar(0, 0, 255);
 	cv::Scalar green = cv::Scalar(0, 255, 0);
