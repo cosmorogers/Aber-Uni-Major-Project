@@ -14,11 +14,11 @@
 #include "Target.h"
 
 Target::Target(PotentialPoint a, PotentialPoint b, PotentialPoint c,
-		float diff) {
+		float d) {
 	point_a = a;
 	point_b = b;
 	point_c = c;
-	pythagoras_dif = diff;
+	diff = d;
 }
 
 Target::~Target() {
@@ -40,11 +40,11 @@ Target::~Target() {
  */
 
 void Target::setData(PotentialPoint a, PotentialPoint b, PotentialPoint c,
-		float diff) {
+		float d) {
 	point_a = a;
 	point_b = b;
 	point_c = c;
-	pythagoras_dif = diff;
+	diff = d;
 	//abs((hypotenuse * hypotenuse) - ( (dist2 * dist2) + (dist * dist) ) )
 
 }

@@ -16,17 +16,16 @@ private:
 	PotentialPoint point_a;
 	PotentialPoint point_b;
 	PotentialPoint point_c;
-	float pythagoras_dif;
+	float diff;
 public:
 	Target() {}
 	Target(PotentialPoint a, PotentialPoint b, PotentialPoint c, float diff);
 	virtual ~Target();
 	void setData(PotentialPoint a, PotentialPoint b, PotentialPoint c, float diff);
-	float getRotation();
 	void process(cv::Mat drawing);
 
 	float getDiff() {
-		return pythagoras_dif;
+		return diff;
 	}
 	PotentialPoint getA() {
 		return point_a;
