@@ -55,7 +55,7 @@ void processDirectory() {
 void processSingle() {
 	Mat image, drawing;
 
-	image = imread("/home/chris/Data/PiTarget/pics_2014-03-30/targets/lapse_0256.jpg", CV_LOAD_IMAGE_GRAYSCALE);   // Read the file
+	image = imread("/home/chris/Data/PiTarget/pics_2014-03-30/targets/lapse_0297_r.jpg", CV_LOAD_IMAGE_GRAYSCALE);   // Read the file
 
 	if (!image.data) {
 		cout << "Could not open or find the image" << std::endl;

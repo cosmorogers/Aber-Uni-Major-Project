@@ -119,7 +119,49 @@ void Target::process(cv::Mat drawing) {
 	float pitchMultiplier = cos(bearingRad);
 	float rollMultiplier = sin(bearingRad);
 
+	/* Simple proportional roll/pitch controller */
+
+	//AB is 24cm on actual target
+	float abDistance = sqrt( pow(yawx, 2) + pow(yawy, 2) );
+	float pixelSize = 240 / abDistance;
+
+	//max = 1900, normal = 1500, min = 1100
+	int normalRC = 1500;
+	int maxRC = 1900;
+	int minRC = 1100;
+
+	float gain = 0.5;
+	float error = sqrt( pow( (dx * pixelSize), 2) + pow( (dy * pixelSize), 2) );
+	float output = gain * error;
+
+	int pitchRC = (int) (pitchMultiplier * output) + normalRC;
+	int rollRC = (int) (rollMultiplier * output) + normalRC;
+
+	if (pitchRC > maxRC) {
+		pitchRC = maxRC;
+	} else if (pitchRC < minRC) {
+		pitchRC = minRC;
+	}
+
+	if (rollRC > maxRC) {
+		rollRC = maxRC;
+	} else if (rollRC < minRC) {
+		rollRC = minRC;
+	}
+
+	/* Simple proportional yaw controller */
+	float yawGain = 2.2;
+	int yawRC = (int) (yawdeg * yawGain) + normalRC;
+
+	if (yawRC > maxRC) {
+		yawRC = maxRC;
+	} else if (yawRC < minRC) {
+		yawRC = minRC;
+	}
+
+
 	printf ("pitch: %f, roll: %f, yaw:%f, abs bearing: %f\n", pitchMultiplier, rollMultiplier, yawdeg, bearingDeg );
+	printf ("distance: %f, pitchrc: %d, rollrc: %d, yawrc: %d\n", error, pitchRC, rollRC, yawRC );
 
 	cv::circle(drawing, cv::Point2f(centerx, centery), 5, cv::Scalar(255, 0, 0), 3);
 	cv::circle(drawing, cv::Point2f(imageCenterX, imageCenterY), 5, cv::Scalar(255, 0, 0), 3);
