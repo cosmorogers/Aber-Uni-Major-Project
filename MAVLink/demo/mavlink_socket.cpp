@@ -1,16 +1,15 @@
 #include <common/mavlink.h>
+#include <ardupilotmega/ardupilotmega.h>
 
 // Standard includes
 #include <iostream>
 #include <cstdlib>
-#include <unistd.h>
 #include <cmath>
 #include <string.h>
 #include <inttypes.h>
 #include <fstream>
 // Serial includes
 #include <stdio.h>   /* Standard input/output definitions */
-#include <string.h>  /* String function definitions */
 #include <unistd.h>  /* UNIX standard function definitions */
 #include <fcntl.h>   /* File control definitions */
 #include <errno.h>   /* Error number definitions */
@@ -23,10 +22,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -38,12 +34,12 @@ using namespace std;
 struct timeval tv;                ///< System time
 
 // Settings
-int sysid = 1;             ///< The unique system id of this MAV, 0-127. Has to be consistent across the system
+int sysid = 1;                    ///< The unique system id of this MAV, 0-127. Has to be consistent across the system
 int compid = 1;
 int serial_compid = 0;
-bool silent = false;              ///< Wether console output should be enabled
-bool verbose = false;             ///< Enable verbose output
-bool debug = false;               ///< Enable debug functions and output
+bool silent = false;              ///< Whether console output should be enabled
+bool verbose = true;             ///< Enable verbose output
+bool debug = true;               ///< Enable debug functions and output
 int sockfd;
 
 
@@ -121,7 +117,7 @@ int serial_wait(int serial_fd)
                                 }
                         }
                         
-                        if (verbose || debug)
+                        //if (verbose || debug)
                                 printf("Received message from serial with ID #%d (sys:%d|comp:%d):\n", message.msgid, message.sysid, message.compid);
                         
                         /* decode and print */
@@ -142,30 +138,44 @@ int serial_wait(int serial_fd)
                                   mavlink_heartbeat_t heartbeat;
                                   
                                   mavlink_msg_heartbeat_decode(&message, &heartbeat);
-                                  printf("\t type: %f \n", heartbeat.autopilot);
-                                
+                                  printf("\t type: %d \n", heartbeat.type);
+                                  printf("\t autopilot: %d \n", heartbeat.autopilot);
+                                  printf("\t base_mode: %d \n", heartbeat.base_mode);
+                                  printf("\t system_status: %d \n", heartbeat.system_status);
+                                  printf("\t mavlink_version: %d \n", heartbeat.mavlink_version);
+                                  
+                                  break;
+
+                              case MAVLINK_MSG_ID_RC_CHANNELS_RAW: //doesn't work??
+                                  printf("Got rc channels");
+                                  
+                                  mavlink_rc_channels_raw_t channels;
+                                  
+                                  mavlink_msg_rc_channels_raw_decode(&message, &channels);
+                                  printf("\t rc1: %d \n", channels.chan1_raw);
+                                  printf("\t rc2: %d \n", channels.chan2_raw);
+                                  printf("\t rc3: %d \n", channels.chan3_raw);
+                                  
                                   break;
                               
-                                case MAVLINK_MSG_ID_HIGHRES_IMU:
-                                {
-                                        if (scaled_imu_receive_counter % 50 == 0)
-                                        {
-                                                mavlink_highres_imu_t imu;
-                                                mavlink_msg_highres_imu_decode(&message, &imu);
+                              case MAVLINK_MSG_ID_HIGHRES_IMU: //doesn't work??
+                                  if (scaled_imu_receive_counter % 50 == 0) {
+                                      mavlink_highres_imu_t imu;
+                                      mavlink_msg_highres_imu_decode(&message, &imu);
 
-                                                printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
-                                                printf("\t time: %llu\n", imu.time_usec);
-                                                printf("\t acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc, imu.yacc, imu.zacc);
-                                                printf("\t gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
-                                                printf("\t mag  (NED):\t% f\t% f\t% f (Ga)\n", imu.xmag, imu.ymag, imu.zmag);
-                                                printf("\t baro: \t %f (mBar)\n", imu.abs_pressure);
-                                                printf("\t altitude: \t %f (m)\n", imu.pressure_alt);
-                                                printf("\t temperature: \t %f C\n", imu.temperature);
-                                                printf("\n");
-                                        }
-                                        scaled_imu_receive_counter++;
-                                }
-                                break;
+                                      printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
+                                      printf("\t time: %llu\n", imu.time_usec);
+                                      printf("\t acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc, imu.yacc, imu.zacc);
+                                      printf("\t gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
+                                      printf("\t mag  (NED):\t% f\t% f\t% f (Ga)\n", imu.xmag, imu.ymag, imu.zmag);
+                                      printf("\t baro: \t %f (mBar)\n", imu.abs_pressure);
+                                      printf("\t altitude: \t %f (m)\n", imu.pressure_alt);
+                                      printf("\t temperature: \t %f C\n", imu.temperature);
+                                      printf("\n");
+                                  }
+                                  scaled_imu_receive_counter++;
+
+                                  break;
                         }
                 }
         }
@@ -181,7 +191,7 @@ int main(int argc, char **argv) {
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char buffer[256];
+    //char buffer[256];
     if (argc < 3) {
        fprintf(stderr,"usage %s hostname port\n", argv[0]);
        exit(0);
@@ -205,8 +215,8 @@ int main(int argc, char **argv) {
         printf("ERROR connecting");
     }
     //printf("Please enter the message: ");
-    bzero(buffer,256);
-    fgets(buffer,255,stdin);
+    //bzero(buffer,256);
+    //fgets(buffer,255,stdin);
     
     /*
     n = write(sockfd,buffer,strlen(buffer));
