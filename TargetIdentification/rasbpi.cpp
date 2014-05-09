@@ -47,15 +47,7 @@ int main(int argc, char **argv) {
 		imshow("Target Identification", drawing);
 
 		int c = 0;
-		//do {
 		c = cv::waitKey(10);
-		if ((char) c == 27) {
-			break; // escape
-		} else if ((char) c == 112) {
-
-		}
-		//} while ( (char)c != 32 );
-
 		if ((char) c == 27) {
 			break;
 		}

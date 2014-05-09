@@ -1,0 +1,13 @@
+cmake_minimum_required (VERSION 2.8) 
+project (tracking)
+SET(CMAKE_MODULE_PATH ${CMAKE_INSTALL_PREFIX}/lib/cmake/ )
+
+find_package(raspicam REQUIRED)
+find_package(OpenCV)
+IF  ( OpenCV_FOUND AND raspicam_CV_FOUND)
+MESSAGE(STATUS "COMPILING TRACKING")
+add_executable (tracking rasbpi.cpp Tracking.cpp Target.cpp PotentialPoint.cpp PotentialLine.cpp )  
+target_link_libraries (tracking ${raspicam_CV_LIBS})
+ELSE()
+MESSAGE(FATAL_ERROR "OPENCV NOT FOUND IN YOUR SYSTEM")
+ENDIF() 
